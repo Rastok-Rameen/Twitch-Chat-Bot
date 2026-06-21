@@ -28,6 +28,7 @@ import keyboard
 #== Twitch Chat Bot API
 from twitchAPI.twitch import Twitch
 from twitchAPI.oauth import UserAuthenticator
+from twitchAPI.oauth import UserAuthenticationStorageHelper
 from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand
 import threading
@@ -79,9 +80,12 @@ def stop_bot():
 #== Bot Setup
 async def Botrun():
     twitch = await Twitch(APP_ID, APP_SECRET)
-    auth = UserAuthenticator(twitch, USER_SCOPE, url='http://localhost:3000', loop=loop)
-    token, refresh_token = await auth.authenticate()
-    await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
+    #auth = UserAuthenticator(twitch, USER_SCOPE)
+    #token, refresh_token = await auth.authenticate()
+    #await twitch.set_user_authentication(token, USER_SCOPE, refresh_token)
+    helper = UserAuthenticationStorageHelper(twitch, USER_SCOPE)
+    await helper.bind()
+    print("bind complete")
 
     #== Register Events
     chat = await Chat(twitch)
