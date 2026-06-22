@@ -1,23 +1,24 @@
 #== Python Twitch Chat Bot
 #=== Kivy GUI
 from kivy.app import App
-from kivy.core.window import Window
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.widget import Widget
+from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.settings import SettingsWithSidebar
 from kivy.network.urlrequest import UrlRequest
-from kivy.properties import ObjectProperty
+from kivy.uix.scrollview import ScrollView
 from kivy.properties import StringProperty
+from kivy.properties import ObjectProperty
+from kivy.utils import get_color_from_hex
+from kivy.config import ConfigParser
 from kivy.uix.popup import Popup
 from kivy.lang import Builder
-from kivy.utils import get_color_from_hex
 from kivy.clock import Clock
 from textwrap import fill
 from kivy import Config
@@ -63,12 +64,13 @@ async def on_message(msg: ChatMessage):
     print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
 async def message_work():
     while True:
-        msg = await message_queue.get()
-        if paused:
+        while paused:
             await asyncio.sleep(0.1)
-            await message_queue.put(msg)
-            continue
+        msg = await message_queue.get()
+        while paused:
+            await asyncio.sleep(0.1)
         keyboard.write(msg)
+        await asyncio.sleep(0.1)
 
 #== New Subscriber
 async def on_sub(sub: ChatSub):
@@ -91,6 +93,7 @@ paused = False
 def pauseToggle():
     global paused
     paused = not paused
+    print("paused: " , paused)
 
 #== Bot Setup
 async def Botrun():
@@ -134,19 +137,32 @@ class MainMenuScreen(Screen):
         StartButton = Button(text="Start Bot", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
         StartButton.bind(on_press=lambda x: asyncio.run_coroutine_threadsafe(Botrun(), loop))
         main_layout.add_widget(StartButton)
-        #=== Button to start message buffer
+        #=== Button to toggle message buffer
         ToggleBufferButton = Button(text="Toggle buffer", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
+        ToggleBufferButton.bind(on_press=lambda x: pauseToggle())
         main_layout.add_widget(ToggleBufferButton)
+        #=== Button to open Settings
+        SettingsButton = Button(text="Settings", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
+        SettingsButton.bind(on_press=lambda x: App.get_running_app().open_settings())
+        main_layout.add_widget(SettingsButton)
         self.add_widget(main_layout)
 
 #== Main Class Build
 class MainApp(App):
     title = "Twitch Bot"
+    use_kivy_settings = False
     def build(self):
         Window.clearcolor = "#000000"
         self.screenManager = ScreenManager()
         self.screenManager.add_widget(MainMenuScreen())
+        #== Settings Panel
+        self.settings_cls = SettingsWithSidebar
+        self.config = ConfigParser()
+        self.config.read('src/settings.ini')
         return self.screenManager
+
+    def build_settings(self, settings):
+        settings.add_json_panel('Settings', self.config, 'src/settings.json')
 
 #=== Main function
 if __name__ == '__main__':

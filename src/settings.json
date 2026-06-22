@@ -1,0 +1,9 @@
+[
+  {
+    "type": "string",
+    "title": "Target Twitch Channel",
+    "desc": "Enter the name of the channel here.",
+    "section": "Panel 1",
+    "key": "target_channel"
+  }
+]
