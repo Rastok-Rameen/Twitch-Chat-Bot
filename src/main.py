@@ -49,9 +49,9 @@ APP_ID = os.getenv("TWITCH_CLIENT_ID")
 APP_SECRET = os.getenv("TWITCH_SECRET")
 TARGET_CHANNEL = os.getenv("TARGET_CHANNEL")
 USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
+message_queue = asyncio.Queue()
 
 #== Twitch Chat Bot Initialisation
-
 #== Bot Start Code
 async def on_ready(ready_event: EventData):
     print('Bot is ready for work, joining channels')
@@ -59,7 +59,16 @@ async def on_ready(ready_event: EventData):
 
 #== Message Recieved
 async def on_message(msg: ChatMessage):
+    await message_queue.put(msg.text)
     print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
+async def message_work():
+    while True:
+        msg = await message_queue.get()
+        if paused:
+            await asyncio.sleep(0.1)
+            await message_queue.put(msg)
+            continue
+        keyboard.write(msg)
 
 #== New Subscriber
 async def on_sub(sub: ChatSub):
@@ -76,6 +85,12 @@ stop_signal = False
 def stop_bot():
     global stop_signal
     stop_signal = True
+
+#== Pause/Unpause Chat Bot
+paused = False
+def pauseToggle():
+    global paused
+    paused = not paused
 
 #== Bot Setup
 async def Botrun():
@@ -96,6 +111,8 @@ async def Botrun():
     global stop_signal
     stop_signal = False
     keyboard.add_hotkey('page up+page down', stop_bot)
+    keyboard.add_hotkey('ctrl+alt+p', pauseToggle)
+    asyncio.create_task(message_work())
 
     chat.start()
     print("Bot Started")
