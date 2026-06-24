@@ -42,15 +42,20 @@ def run_async_loop():
 threading.Thread(target=run_async_loop, daemon=True).start()
 
 #== Environment Variable Loading
-from dotenv import load_dotenv
-import os
+#from dotenv import load_dotenv
+#import os
+#load_dotenv()
+#APP_ID = os.getenv("TWITCH_CLIENT_ID")
+#APP_SECRET = os.getenv("TWITCH_SECRET")
+#TARGET_CHANNEL = os.getenv("TARGET_CHANNEL")
 
-load_dotenv()
-APP_ID = os.getenv("TWITCH_CLIENT_ID")
-APP_SECRET = os.getenv("TWITCH_SECRET")
-TARGET_CHANNEL = os.getenv("TARGET_CHANNEL")
+#== Global API variables
 USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
+APP_ID = None
+APP_SECRET = None
+TARGET_CHANNEL = None
 message_queue = asyncio.Queue()
+botActive = False
 
 #== Twitch Chat Bot Initialisation
 #== Bot Start Code
@@ -58,7 +63,7 @@ async def on_ready(ready_event: EventData):
     print('Bot is ready for work, joining channels')
     await ready_event.chat.join_room(TARGET_CHANNEL)
 
-#== Message Recieved
+#== Message Received
 async def on_message(msg: ChatMessage):
     await message_queue.put(msg.text)
     print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
@@ -97,6 +102,23 @@ def pauseToggle():
 
 #== Bot Setup
 async def Botrun():
+    global botActive
+    if botActive:
+        stop_bot()
+        return
+    botActive = True
+    global APP_ID
+    global APP_SECRET
+    global TARGET_CHANNEL
+    app = App.get_running_app()
+    APP_ID = app.config.get("Panel 1", "appID")
+    APP_SECRET = app.config.get("Panel 1", "appSecret")
+    TARGET_CHANNEL = app.config.get("Panel 1", "target_channel")
+    if (APP_ID == "") or (APP_SECRET == "") or (TARGET_CHANNEL == ""):
+        Clock.schedule_once(lambda x: errorPopup("Missing keys in settings."))
+        botActive = False
+        stop_bot()
+        return
     twitch = await Twitch(APP_ID, APP_SECRET)
     #auth = UserAuthenticator(twitch, USER_SCOPE)
     #token, refresh_token = await auth.authenticate()
@@ -125,7 +147,18 @@ async def Botrun():
     finally:
         chat.stop()
         await twitch.close()
+        botActive = False
         print("Bot Stopped")
+
+#== Error popup
+def errorPopup(error_message):
+    errorLayout = BoxLayout(orientation="vertical", padding=20, spacing=10)
+    errorLayout.add_widget(Label(text=error_message))
+    closeButton = Button(text="OK", size_hint=(1, 0.3))
+    errorLayout.add_widget(closeButton)
+    error_popup = Popup(title="Error", content=errorLayout, size_hint=(0.6, 0.4))
+    closeButton.bind(on_press=error_popup.dismiss)
+    error_popup.open()
 
 #== Main Widget
 class MainMenuScreen(Screen):
@@ -134,11 +167,11 @@ class MainMenuScreen(Screen):
         #== Main Layout
         main_layout = BoxLayout(orientation="vertical", padding=20, spacing=10)
         #== Button to start Bot
-        StartButton = Button(text="Start Bot", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
+        StartButton = Button(text="Start/Stop Bot", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
         StartButton.bind(on_press=lambda x: asyncio.run_coroutine_threadsafe(Botrun(), loop))
         main_layout.add_widget(StartButton)
         #=== Button to toggle message buffer
-        ToggleBufferButton = Button(text="Toggle buffer", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
+        ToggleBufferButton = Button(text="Toggle message buffer", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
         ToggleBufferButton.bind(on_press=lambda x: pauseToggle())
         main_layout.add_widget(ToggleBufferButton)
         #=== Button to open Settings

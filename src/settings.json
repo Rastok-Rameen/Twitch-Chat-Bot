@@ -5,5 +5,19 @@
     "desc": "Enter the name of the channel here.",
     "section": "Panel 1",
     "key": "target_channel"
+  },
+  {
+    "type": "string",
+    "title": "App ID",
+    "desc": "Enter the App ID here.",
+    "section": "Panel 1",
+    "key": "appID"
+  },
+  {
+    "type": "string",
+    "title": "App Secret",
+    "desc": "Enter the App Secret here.",
+    "section": "Panel 1",
+    "key": "appSecret"
   }
 ]
