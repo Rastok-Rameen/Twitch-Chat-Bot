@@ -1,0 +1,30 @@
+[
+  {
+    "type": "string",
+    "title": "Background Colour",
+    "desc": "Enter a hex colour code here.",
+    "section": "Panel 2",
+    "key": "bgcolor"
+  },
+  {
+    "type": "string",
+    "title": "Foreground Colour",
+    "desc": "Enter a hex colour code here.",
+    "section": "Panel 2",
+    "key": "fgcolor"
+  },
+  {
+    "type": "string",
+    "title": "Accent Colour",
+    "desc": "Enter a hex colour code here.",
+    "section": "Panel 2",
+    "key": "accentcolor"
+  },
+  {
+    "type": "string",
+    "title": "Button Colour",
+    "desc": "Enter a hex colour code here.",
+    "section": "Panel 2",
+    "key": "buttoncolor"
+  }
+]

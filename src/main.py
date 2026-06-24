@@ -152,11 +152,13 @@ async def Botrun():
 
 #== Error popup
 def errorPopup(error_message):
+    app = App.get_running_app()
     errorLayout = BoxLayout(orientation="vertical", padding=20, spacing=10)
-    errorLayout.add_widget(Label(text=error_message))
-    closeButton = Button(text="OK", size_hint=(1, 0.3))
+    errorLayout.add_widget(Label(text=error_message, color=app.config.get("Panel 2", "fgcolor")))
+    closeButton = Button(text="OK", size_hint=(1, 0.3), background_color=app.config.get("Panel 2", "buttoncolor"), color=app.config.get("Panel 2", "fgcolor"))
     errorLayout.add_widget(closeButton)
-    error_popup = Popup(title="Error", content=errorLayout, size_hint=(0.6, 0.4))
+    error_popup = Popup(title="Error", content=errorLayout, size_hint=(0.6, 0.4), separator_color=app.config.get("Panel 2", "accentcolor"), title_color=app.config.get("Panel 2", "fgcolor")
+                        ,background_color=app.config.get("Panel 2", "bgcolor"))
     closeButton.bind(on_press=error_popup.dismiss)
     error_popup.open()
 
@@ -164,18 +166,19 @@ def errorPopup(error_message):
 class MainMenuScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        app = App.get_running_app()
         #== Main Layout
         main_layout = BoxLayout(orientation="vertical", padding=20, spacing=10)
         #== Button to start Bot
-        StartButton = Button(text="Start/Stop Bot", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
+        StartButton = Button(text="Start/Stop Bot", size_hint=(1, 0.3),background_color=app.config.get("Panel 2", "buttoncolor"),color=app.config.get("Panel 2", "fgcolor"))
         StartButton.bind(on_press=lambda x: asyncio.run_coroutine_threadsafe(Botrun(), loop))
         main_layout.add_widget(StartButton)
         #=== Button to toggle message buffer
-        ToggleBufferButton = Button(text="Toggle message buffer", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
+        ToggleBufferButton = Button(text="Toggle message buffer", size_hint=(1, 0.3),background_color=app.config.get("Panel 2", "buttoncolor"),color=app.config.get("Panel 2", "fgcolor"))
         ToggleBufferButton.bind(on_press=lambda x: pauseToggle())
         main_layout.add_widget(ToggleBufferButton)
         #=== Button to open Settings
-        SettingsButton = Button(text="Settings", size_hint=(1, 0.3),background_color="#00FF00",color="#00FF00")
+        SettingsButton = Button(text="Settings", size_hint=(1, 0.3),background_color=app.config.get("Panel 2", "buttoncolor"),color=app.config.get("Panel 2", "fgcolor"))
         SettingsButton.bind(on_press=lambda x: App.get_running_app().open_settings())
         main_layout.add_widget(SettingsButton)
         self.add_widget(main_layout)
@@ -185,17 +188,19 @@ class MainApp(App):
     title = "Twitch Bot"
     use_kivy_settings = False
     def build(self):
-        Window.clearcolor = "#000000"
-        self.screenManager = ScreenManager()
-        self.screenManager.add_widget(MainMenuScreen())
         #== Settings Panel
         self.settings_cls = SettingsWithSidebar
         self.config = ConfigParser()
         self.config.read('src/settings.ini')
+        self.screenManager = ScreenManager()
+        self.screenManager.add_widget(MainMenuScreen())
+        Window.clearcolor = self.config.get("Panel 2", "bgcolor")
         return self.screenManager
 
+    #== Add panels to settings
     def build_settings(self, settings):
-        settings.add_json_panel('Settings', self.config, 'src/settings.json')
+        settings.add_json_panel('Twitch Bot', self.config, 'src/twitch_settings.json')
+        settings.add_json_panel('App Appearance', self.config, 'src/appearance_settings.json')
 
 #=== Main function
 if __name__ == '__main__':
