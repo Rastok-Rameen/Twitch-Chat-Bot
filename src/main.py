@@ -57,6 +57,7 @@ APP_SECRET = None
 TARGET_CHANNEL = None
 message_queue = asyncio.Queue()
 botActive = False
+statusBot = False
 
 #== Append Message Log
 def append_log(username, content, timestamp):
@@ -107,6 +108,11 @@ def pauseToggle():
     global paused
     paused = not paused
     print("paused: " , paused)
+    App.get_running_app().updateStatus()
+    if paused:
+        append_log("System", "Message Buffer Paused", datetime.now().strftime("%H:%M:%S"))
+    else:
+        append_log("System", "Message Buffer UnPaused", datetime.now().strftime("%H:%M:%S"))
 
 #== Bot Setup
 async def Botrun():
@@ -149,6 +155,10 @@ async def Botrun():
 
     chat.start()
     print("Bot Started")
+    append_log("System", "Bot is ready!", datetime.now().strftime("%H:%M:%S"))
+    global statusBot
+    statusBot = True
+    app.updateStatus()
     try:
         while not stop_signal:
             await asyncio.sleep(0.1)
@@ -156,7 +166,10 @@ async def Botrun():
         chat.stop()
         await twitch.close()
         botActive = False
+        statusBot = False
+        app.updateStatus()
         print("Bot Stopped")
+        append_log("System", "Bot stopped!", datetime.now().strftime("%H:%M:%S"))
 
 #== Error popup
 def errorPopup(error_message):
@@ -178,6 +191,7 @@ class MainMenuScreen(Screen):
         #== Main Layouts
         main_layout = BoxLayout(orientation="horizontal", padding=20, spacing=10)
         left_layout = BoxLayout(orientation="vertical", padding=20, spacing=10, size_hint_x=0.6)
+        right_layout = BoxLayout(orientation="vertical", padding=20, spacing=10)
         #== Button to start Bot
         StartButton = Button(text="Start/Stop Bot", size_hint=(1, 0.3),background_color=app.config.get("Panel 2", "buttoncolor"),color=app.config.get("Panel 2", "fgcolor"))
         StartButton.bind(on_press=lambda x: asyncio.run_coroutine_threadsafe(Botrun(), loop))
@@ -193,18 +207,25 @@ class MainMenuScreen(Screen):
         main_layout.add_widget(left_layout)
         #== Message Log
         self.message_log = Scrollable()
-        self.message_log.size_hint_y = 0.9
-        main_layout.add_widget(self.message_log)
+        self.message_log.size_hint_y = 1
+        self.statusLabel = Label(text=app.status_text, height=30, size_hint_y=0.1, color=app.config.get("Panel 2", "fgcolor"))
+        right_layout.add_widget(self.statusLabel)
+        right_layout.add_widget(self.message_log)
+        main_layout.add_widget(right_layout)
         self.add_widget(main_layout)
 
     def get_log(self):
         return self.message_log
 
+    #== Updating Status Label
+    def updateLabel(self):
+        self.statusLabel.text = App.get_running_app().status_text
+
 #== Scrollable Message View
 class Scrollable(ScrollView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        #=== Initialise Values
+        #== Initialise Values
         self.scroll_x = 0
         self.scroll_y = 1
         self.size_hint_y = 0.9
@@ -217,7 +238,7 @@ class Scrollable(ScrollView):
         new_message = MessageContainer(username, content, timestamp)
         self.emb_box.add_widget(new_message)
         self.emb_box.height += new_message.height
-        Clock.schedule_once(lambda dt: setattr(self, "scroll_y", 0), 0)
+        Clock.schedule_once(lambda x: setattr(self, "scroll_y", 0), 0)
 
 #== Message Container
 class MessageContainer(BoxLayout):
@@ -251,6 +272,7 @@ class MessageContainer(BoxLayout):
 class MainApp(App):
     title = "Twitch Bot"
     use_kivy_settings = False
+    status_text = StringProperty("Bot Offline | Buffer Disabled")
     def build(self):
         #== Settings Panel
         self.settings_cls = SettingsWithSidebar
@@ -266,6 +288,20 @@ class MainApp(App):
         settings.add_json_panel('Twitch Bot', self.config, 'src/twitch_settings.json')
         settings.add_json_panel('App Appearance', self.config, 'src/appearance_settings.json')
 
-#=== Main function
+    #== Update Status String
+    def updateStatus(self):
+        if statusBot and not paused:
+            App.get_running_app().status_text = "Bot Online | Buffer Disabled"
+        elif statusBot and paused:
+            App.get_running_app().status_text = "Bot Online | Buffer Enabled"
+        elif not statusBot and paused:
+            App.get_running_app().status_text = "Bot Offline | Buffer Enabled"
+        elif not statusBot and not paused:
+            App.get_running_app().status_text = "Bot Offline | Buffer Disabled"
+        screen = App.get_running_app().screenManager.get_screen("main")
+        Clock.schedule_once(lambda x: screen.updateLabel())
+
+
+#== Main function
 if __name__ == '__main__':
     MainApp().run()
