@@ -34,6 +34,7 @@ from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.chat import Chat, EventData, ChatMessage, ChatSub, ChatCommand
 import threading
 import asyncio
+from datetime import datetime
 
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
@@ -57,6 +58,12 @@ TARGET_CHANNEL = None
 message_queue = asyncio.Queue()
 botActive = False
 
+#== Append Message Log
+def append_log(username, content, timestamp):
+    app = App.get_running_app()
+    screen = app.screenManager.get_screen("main")
+    Clock.schedule_once(lambda x: screen.get_log().add_message(username, content, timestamp))
+
 #== Twitch Chat Bot Initialisation
 #== Bot Start Code
 async def on_ready(ready_event: EventData):
@@ -66,6 +73,7 @@ async def on_ready(ready_event: EventData):
 #== Message Received
 async def on_message(msg: ChatMessage):
     await message_queue.put(msg.text)
+    append_log(msg.user.name, msg.text, datetime.fromtimestamp(msg.sent_timestamp / 1000).strftime("%H:%M:%S"))
     print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
 async def message_work():
     while True:
@@ -167,21 +175,77 @@ class MainMenuScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         app = App.get_running_app()
-        #== Main Layout
-        main_layout = BoxLayout(orientation="vertical", padding=20, spacing=10)
+        #== Main Layouts
+        main_layout = BoxLayout(orientation="horizontal", padding=20, spacing=10)
+        left_layout = BoxLayout(orientation="vertical", padding=20, spacing=10, size_hint_x=0.6)
         #== Button to start Bot
         StartButton = Button(text="Start/Stop Bot", size_hint=(1, 0.3),background_color=app.config.get("Panel 2", "buttoncolor"),color=app.config.get("Panel 2", "fgcolor"))
         StartButton.bind(on_press=lambda x: asyncio.run_coroutine_threadsafe(Botrun(), loop))
-        main_layout.add_widget(StartButton)
+        left_layout.add_widget(StartButton)
         #=== Button to toggle message buffer
         ToggleBufferButton = Button(text="Toggle message buffer", size_hint=(1, 0.3),background_color=app.config.get("Panel 2", "buttoncolor"),color=app.config.get("Panel 2", "fgcolor"))
         ToggleBufferButton.bind(on_press=lambda x: pauseToggle())
-        main_layout.add_widget(ToggleBufferButton)
+        left_layout.add_widget(ToggleBufferButton)
         #=== Button to open Settings
         SettingsButton = Button(text="Settings", size_hint=(1, 0.3),background_color=app.config.get("Panel 2", "buttoncolor"),color=app.config.get("Panel 2", "fgcolor"))
         SettingsButton.bind(on_press=lambda x: App.get_running_app().open_settings())
-        main_layout.add_widget(SettingsButton)
+        left_layout.add_widget(SettingsButton)
+        main_layout.add_widget(left_layout)
+        #== Message Log
+        self.message_log = Scrollable()
+        self.message_log.size_hint_y = 0.9
+        main_layout.add_widget(self.message_log)
         self.add_widget(main_layout)
+
+    def get_log(self):
+        return self.message_log
+
+#== Scrollable Message View
+class Scrollable(ScrollView):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        #=== Initialise Values
+        self.scroll_x = 0
+        self.scroll_y = 1
+        self.size_hint_y = 0.9
+        #== Embedded Box Layout
+        self.emb_box = BoxLayout(orientation="vertical", size_hint_y=None)
+        self.add_widget(self.emb_box)
+
+    #== Add Message to View
+    def add_message(self, username, content, timestamp):
+        new_message = MessageContainer(username, content, timestamp)
+        self.emb_box.add_widget(new_message)
+        self.emb_box.height += new_message.height
+        Clock.schedule_once(lambda dt: setattr(self, "scroll_y", 0), 0)
+
+#== Message Container
+class MessageContainer(BoxLayout):
+    def __init__(self, username, content, timestamp, **kwargs):
+        super().__init__(**kwargs)
+        #== Initialise Values
+        self.orientation = "horizontal"
+        self.size_hint_y = None
+        self.height = 50
+        self.padding = [8, 4]
+        app = App.get_running_app()
+
+        #== Visible Message Content
+        self.horizontal_box = BoxLayout(orientation="horizontal", size_hint_x=0.5)
+        namelabel = Label(text=username, size_hint_y=1, color=app.config.get("Panel 2", "fgcolor"))
+        timelabel = Label(text=timestamp, size_hint_y=1, color=app.config.get("Panel 2", "fgcolor"))
+        #== Scrollable Message Length
+        text_scroll = ScrollView(size_hint_x=0.8,size_hint_y=1,do_scroll_x=False,do_scroll_y=True,bar_width=4,always_overscroll=False)
+        textlabel = Label(text=content,color=app.config.get("Panel 2", "fgcolor"),size_hint_y=None,halign="left",valign="top")
+        textlabel.bind(
+            texture_size=lambda inst, val: setattr(inst, "height", inst.texture_size[1]),
+            width=lambda inst, val: setattr(inst, "text_size", (val, None))
+        )
+        text_scroll.add_widget(textlabel)
+        self.horizontal_box.add_widget(namelabel)
+        self.horizontal_box.add_widget(timelabel)
+        self.add_widget(self.horizontal_box)
+        self.add_widget(text_scroll)
 
 #== Main Class Build
 class MainApp(App):
@@ -193,7 +257,7 @@ class MainApp(App):
         self.config = ConfigParser()
         self.config.read('src/settings.ini')
         self.screenManager = ScreenManager()
-        self.screenManager.add_widget(MainMenuScreen())
+        self.screenManager.add_widget(MainMenuScreen(name="main"))
         Window.clearcolor = self.config.get("Panel 2", "bgcolor")
         return self.screenManager
 
