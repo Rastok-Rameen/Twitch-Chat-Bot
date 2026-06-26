@@ -8,10 +8,24 @@
   },
   {
     "type": "string",
-    "title": "Foreground Colour",
+    "title": "Foreground Text Colour",
     "desc": "Enter a hex colour code here.",
     "section": "Panel 2",
     "key": "fgcolor"
+  },
+  {
+    "type": "string",
+    "title": "Foreground Colour for System Messages",
+    "desc": "Enter a hex colour code here.",
+    "section": "Panel 2",
+    "key": "sysfgcolor"
+  },
+  {
+    "type": "string",
+    "title": "Foreground Colour for User Messages",
+    "desc": "Enter a hex colour code here.",
+    "section": "Panel 2",
+    "key": "usrfgcolor"
   },
   {
     "type": "string",

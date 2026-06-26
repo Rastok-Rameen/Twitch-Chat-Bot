@@ -58,6 +58,7 @@ TARGET_CHANNEL = None
 message_queue = asyncio.Queue()
 botActive = False
 statusBot = False
+currentMessage = None
 
 #== Append Message Log
 def append_log(username, content, timestamp):
@@ -73,18 +74,32 @@ async def on_ready(ready_event: EventData):
 
 #== Message Received
 async def on_message(msg: ChatMessage):
+    global message_queue
     await message_queue.put(msg.text)
     append_log(msg.user.name, msg.text, datetime.fromtimestamp(msg.sent_timestamp / 1000).strftime("%H:%M:%S"))
     print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
 async def message_work():
+    global currentMessage
     while True:
         while paused:
             await asyncio.sleep(0.1)
-        msg = await message_queue.get()
+        currentMessage = await message_queue.get()
         while paused:
             await asyncio.sleep(0.1)
-        keyboard.write(msg)
+        keyboard.write(currentMessage)
         await asyncio.sleep(0.1)
+
+#== Clear Message Buffer
+def clearQueue():
+    global message_queue
+    global currentMessage
+    try:
+        while not message_queue.empty():
+            message_queue.get_nowait()
+    except:
+        pass
+    currentMessage = None
+    append_log("System", "Message Buffer Cleared", datetime.now().strftime("%H:%M:%S"))
 
 #== New Subscriber
 async def on_sub(sub: ChatSub):
@@ -128,6 +143,9 @@ async def Botrun():
     APP_ID = app.config.get("Panel 1", "appID")
     APP_SECRET = app.config.get("Panel 1", "appSecret")
     TARGET_CHANNEL = app.config.get("Panel 1", "target_channel")
+    stopkey = app.config.get("Panel 3", "stopbot")
+    pausekey = app.config.get("Panel 3", "pausetoggle")
+    clearkey = app.config.get("Panel 3", "clearbuffer")
     if (APP_ID == "") or (APP_SECRET == "") or (TARGET_CHANNEL == ""):
         Clock.schedule_once(lambda x: errorPopup("Missing keys in settings."))
         botActive = False
@@ -149,8 +167,9 @@ async def Botrun():
     chat.register_command('help', help_command)
     global stop_signal
     stop_signal = False
-    keyboard.add_hotkey('page up+page down', stop_bot)
-    keyboard.add_hotkey('ctrl+alt+p', pauseToggle)
+    keyboard.add_hotkey(stopkey, stop_bot)
+    keyboard.add_hotkey(pausekey, pauseToggle)
+    keyboard.add_hotkey(clearkey, clearQueue)
     asyncio.create_task(message_work())
 
     chat.start()
@@ -253,11 +272,15 @@ class MessageContainer(BoxLayout):
 
         #== Visible Message Content
         self.horizontal_box = BoxLayout(orientation="horizontal", size_hint_x=0.5)
-        namelabel = Label(text=username, size_hint_y=1, color=app.config.get("Panel 2", "fgcolor"))
-        timelabel = Label(text=timestamp, size_hint_y=1, color=app.config.get("Panel 2", "fgcolor"))
+        if username == "System":
+            colour = app.config.get("Panel 2", "sysfgcolor")
+        else:
+            colour = app.config.get("Panel 2", "usrfgcolor")
+        namelabel = Label(text=username, size_hint_y=1, color=colour)
+        timelabel = Label(text=timestamp, size_hint_y=1, color=colour)
         #== Scrollable Message Length
         text_scroll = ScrollView(size_hint_x=0.8,size_hint_y=1,do_scroll_x=False,do_scroll_y=True,bar_width=4,always_overscroll=False)
-        textlabel = Label(text=content,color=app.config.get("Panel 2", "fgcolor"),size_hint_y=None,halign="left",valign="top")
+        textlabel = Label(text=content,color=colour,size_hint_y=None,halign="left",valign="top")
         textlabel.bind(
             texture_size=lambda inst, val: setattr(inst, "height", inst.texture_size[1]),
             width=lambda inst, val: setattr(inst, "text_size", (val, None))
@@ -287,6 +310,7 @@ class MainApp(App):
     def build_settings(self, settings):
         settings.add_json_panel('Twitch Bot', self.config, 'src/twitch_settings.json')
         settings.add_json_panel('App Appearance', self.config, 'src/appearance_settings.json')
+        settings.add_json_panel('Hotkeys', self.config, 'src/hotkeys_settings.json')
 
     #== Update Status String
     def updateStatus(self):

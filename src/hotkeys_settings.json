@@ -1,0 +1,39 @@
+[
+  {
+    "type": "title",
+    "title": "To find out key names check out:"
+  },
+  {
+    "type": "title",
+    "title": "https://github.com/boppreh/keyboard/blob/master/keyboard/_canonical_names.py"
+  },
+  {
+  "type": "title",
+  "title": "Use + for simultaneous presses e.g. 'p+o' for p and o"
+  },
+  {
+    "type": "string",
+    "title": "Stop Bot",
+    "desc": "Enter a hotkey for stopping the bot here.",
+    "section": "Panel 3",
+    "key": "stopbot"
+  },
+  {
+    "type": "string",
+    "title": "Pause Message Buffer",
+    "desc": "Enter a hotkey for pausing the buffer here.",
+    "section": "Panel 3",
+    "key": "pausetoggle"
+  },
+  {
+    "type": "string",
+    "title": "Clear Message Buffer",
+    "desc": "Enter a hotkey for clearing the buffer here.",
+    "section": "Panel 3",
+    "key": "clearbuffer"
+  },
+  {
+    "type": "title",
+    "title": "Restart the app to take effect."
+  }
+]
