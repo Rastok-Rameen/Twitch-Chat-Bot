@@ -19,5 +19,9 @@
     "desc": "Enter the App Secret here.",
     "section": "Panel 1",
     "key": "appSecret"
+  },
+  {
+    "type": "title",
+    "title": "Use any text editor on dynamic_commands.json to edit !commands"
   }
 ]

@@ -23,8 +23,9 @@ from kivy.clock import Clock
 from textwrap import fill
 from kivy import Config
 
-#== Keyboard input and Hotkey Support
+#== Keyboard input, Hotkeys and Storage
 import keyboard
+import json
 
 #== Twitch Chat Bot API
 from twitchAPI.twitch import Twitch
@@ -75,7 +76,7 @@ async def on_ready(ready_event: EventData):
 #== Message Received
 async def on_message(msg: ChatMessage):
     global message_queue
-    await message_queue.put(msg.text)
+    await message_queue.put(msg)
     append_log(msg.user.name, msg.text, datetime.fromtimestamp(msg.sent_timestamp / 1000).strftime("%H:%M:%S"))
     print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
 async def message_work():
@@ -86,7 +87,7 @@ async def message_work():
         currentMessage = await message_queue.get()
         while paused:
             await asyncio.sleep(0.1)
-        keyboard.write(currentMessage)
+        keyboard.write(currentMessage.text)
         await asyncio.sleep(0.1)
 
 #== Clear Message Buffer
@@ -107,9 +108,15 @@ async def on_sub(sub: ChatSub):
           f'  Type: {sub.sub_plan}\n'
           f'  Message: {sub.sub_message}')
 
-#== Custom !help command
-async def help_command(cmd: ChatCommand):
-    await cmd.reply(f"Welcome to {TARGET_CHANNEL}'s livestream! This bot reads your messages and adds them to his computer")
+#== Custom !commands
+async def dynamic_command(cmd: ChatCommand):
+    name = cmd.name.lower()
+    with open("src/dynamic_commands.json", "r") as f:
+        custom_commands = json.load(f)
+    if name in custom_commands:
+        reply = custom_commands[name]
+        reply = reply.format(TARGET_CHANNEL=TARGET_CHANNEL, USER=cmd.user.name)
+        await cmd.reply(reply)
 
 #== Stopping Chat Bot
 stop_signal = False
@@ -164,7 +171,11 @@ async def Botrun():
     chat.register_event(ChatEvent.READY, on_ready)
     chat.register_event(ChatEvent.MESSAGE, on_message)
     chat.register_event(ChatEvent.SUB, on_sub)
-    chat.register_command('help', help_command)
+    #== Dynamic/Custom commands
+    with open("src/dynamic_commands.json", "r") as f:
+        custom_commands = json.load(f)
+    for item in custom_commands.keys():
+        chat.register_command(item, dynamic_command)
     global stop_signal
     stop_signal = False
     keyboard.add_hotkey(stopkey, stop_bot)

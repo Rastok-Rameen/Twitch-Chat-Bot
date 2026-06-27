@@ -1,0 +1,4 @@
+{
+  "help": "Welcome to {TARGET_CHANNEL}'s livestream! This bot reads your messages and adds them to his computer",
+  "hello": "Hi there {USER}!"
+}
