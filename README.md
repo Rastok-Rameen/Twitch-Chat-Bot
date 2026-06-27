@@ -15,7 +15,7 @@ The executible is unsigned, so it is highly likely that Windows Defender will tr
 - Customisable Hotkeys to manage the bot
 - Message filtering for censors
 - Scrollable chat log
-- Settings Panale to customise the app
+- Settings Panel to customise the app
 
 ## Installation (Executable)
 
