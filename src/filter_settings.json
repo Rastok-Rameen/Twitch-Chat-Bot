@@ -1,0 +1,13 @@
+[
+  {
+    "type": "title",
+    "title": "Messages with these words should be dropped and not typed."
+  },
+  {
+    "type": "path",
+    "title": "Banned Words",
+    "desc": "Select a .txt file with censored words.",
+    "section": "Panel 4",
+    "key": "bannedwords"
+  }
+]

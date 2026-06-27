@@ -60,6 +60,7 @@ message_queue = asyncio.Queue()
 botActive = False
 statusBot = False
 currentMessage = None
+banned_words = []
 
 #== Append Message Log
 def append_log(username, content, timestamp):
@@ -81,10 +82,20 @@ async def on_message(msg: ChatMessage):
     print(f'in {msg.room.name}, {msg.user.name} said: {msg.text}')
 async def message_work():
     global currentMessage
+    banned_file = App.get_running_app().config.get("Panel 4", "bannedwords")
+    if banned_file:
+        try:
+            with open(banned_file, "r") as f:
+                global banned_words
+                banned_words = [line.strip().lower() for line in f if line.strip()]
+        except:
+            pass
     while True:
         while paused:
             await asyncio.sleep(0.1)
         currentMessage = await message_queue.get()
+        if any(word in currentMessage.text.lower() for word in banned_words):
+            continue
         while paused:
             await asyncio.sleep(0.1)
         keyboard.write(currentMessage.text)
@@ -322,6 +333,7 @@ class MainApp(App):
         settings.add_json_panel('Twitch Bot', self.config, 'src/twitch_settings.json')
         settings.add_json_panel('App Appearance', self.config, 'src/appearance_settings.json')
         settings.add_json_panel('Hotkeys', self.config, 'src/hotkeys_settings.json')
+        settings.add_json_panel('Filter', self.config, 'src/filter_settings.json')
 
     #== Update Status String
     def updateStatus(self):
